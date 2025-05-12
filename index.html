@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Focusuide - Juego de Memoria Neuronal</title>
+<style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #f6d365, #fda085);
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    h1 {
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+      background: #2c3e50;
+      color: white;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      padding: 30px;
+      justify-content: center;
+      max-width: 800px;
+      margin: auto;
+    }
+    .card {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background-color: #333;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card img {
+      max-width: 100%;
+      max-height: 100%;
+      display: none;
+    }
+    .card p {
+      font-size: 14px;
+      margin: 5px 0;
+      color: white;
+      text-align: center;
+      display: none;
+    }
+    .card.revealed img {
+      display: block;
+    }
+    .card.revealed p {
+      display: block;
+    }
+    .card.revealed .back {
+      display: none;
+    }
+    .back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      background-color: #2c3e50;
+    }
+    #mensajeFinal {
+      text-align: center;
+      font-size: 2em;
+      margin: 20px;
+      font-weight: bold;
+      color: #3498db;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+<header style="text-align:center; font-size:1em; margin:20px; color:#2c3e50;">
+<p><strong>Desarrollado por:</strong> Kevin, Mateo y Felipe</p>
+<p>Este programa está pensado para facilitar el método de estudio de las personas de una manera divertida,
+    aplicando contenidos vistos en la materia de Ingeniería y Pensamiento Humano.</p>
+</header>
+<h1>Focusuide - Memoria de Partes de la Neurona</h1>
+<div class="grid" id="gameBoard"></div>
+<div id="mensajeFinal"></div>
+<script>
+    const tarjetas = [
+      { nombre: 'Axón', img: 'https://cpsc.edu.co/wp-content/uploads/2019/07/Ciencias_CIV_MIII_16.jpg' },
+      { nombre: 'Dendritas', img: 'https://upload.wikimedia.org/wikipedia/commons/d/d9/Dendriticspines.jpg' },
+      { nombre: 'Soma', img: 'https://definicion.de/wp-content/uploads/2011/07/soma-1.png' },
+      { nombre: 'Mielina', img: 'https://www.kenhub.com/thumbor/zB6NvihmTGQmHi2elPb00dEm9V0=/fit-in/413x413/filters:fill(FFFFFF,true):watermark(/images/watermark_only_413.png,0,0,0):watermark(/images/logo_url_sm.png,-10,-10,0):format(jpeg)/images/anatomy_term/node-of-ranvier/AeffDQCXTiOen6XzD42inA_Neuron_myelin_sheath_gap.jpg' },
+      { nombre: 'Botones sinápticos', img: 'https://pymstatic.com/16600/conversions/sinapsis-wide.jpg' },
+      { nombre: 'Neurona completa', img: 'https://img.freepik.com/vector-gratis/diagrama-celula-vastago-fondo-blanco_1308-15286.jpg?semt=ais_hybrid&w=740' },
+    ];
+
+    const gameBoard = document.getElementById('gameBoard');
+    let cards = [...tarjetas, ...tarjetas]
+      .sort(() => 0.5 - Math.random())
+      .map((t, i) => ({ ...t, id: i, matched: false }));
+
+    let firstCard = null;
+    let lockBoard = false;
+
+    function renderBoard() {
+      gameBoard.innerHTML = '';
+      cards.forEach(card => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card';
+        cardEl.dataset.id = card.id;
+
+        const nombreEl = document.createElement('p');
+        nombreEl.textContent = card.nombre;
+
+        const imgEl = document.createElement('img');
+        imgEl.src = card.img;
+        imgEl.alt = card.nombre;
+
+        const back = document.createElement('div');
+        back.className = 'back';
+        back.textContent = '?';
+
+        cardEl.appendChild(nombreEl);
+        cardEl.appendChild(imgEl);
+        cardEl.appendChild(back);
+        cardEl.addEventListener('click', () => revealCard(cardEl, card));
+
+        gameBoard.appendChild(cardEl);
+      });
+    }
+
+    function revealCard(el, card) {
+      if (lockBoard || el.classList.contains('revealed')) return;
+      el.classList.add('revealed');
+      if (!firstCard) {
+        firstCard = { el, card };
+      } else {
+        lockBoard = true;
+        setTimeout(() => {
+          if (firstCard.card.nombre === card.nombre && firstCard.card.id !== card.id) {
+            firstCard.el.removeEventListener('click', () => {});
+            el.removeEventListener('click', () => {});
+          } else {
+            firstCard.el.classList.remove('revealed');
+            el.classList.remove('revealed');
+          }
+          firstCard = null;
+          lockBoard = false;
+          checkGameEnd();
+        }, 1000);
+      }
+    }
+
+    function checkGameEnd() {
+      const revealedCards = document.querySelectorAll('.card.revealed');
+      if (revealedCards.length === cards.length) {
+        setTimeout(() => {
+          document.getElementById("mensajeFinal").innerHTML = "<strong>¡Felicidades! Has completado el juego. Estás aprendiendo y memorizando de forma increíble. ¡Sigue así!</strong>";
+        }, 500);
+      }
+    }
+
+    renderBoard();
+</script>
+</body>
+</html>
